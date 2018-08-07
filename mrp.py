@@ -13,11 +13,11 @@ def mrp(month, day, year):
     batch = readFile('Paint_August_Batch_SIzes')
     inventory = readFile('Paint_August_Inventory')
     reorder = readFile('Paint_August_Reorder_Qty')
-#    so = readFile('Sales Orders')
+    so = readFile('Sales Orders')
     
     production = checkStockItems(inventory, reorder, stock, batch)
     
-    MTO = (checkSalesOrders(inventory, batch))
+    MTO = checkSalesOrders(inventory, batch, so)
     
     for run in MTO:
         production.append(run)
@@ -25,10 +25,8 @@ def mrp(month, day, year):
     production = pd.DataFrame(production)
     production.columns = ('Item', 'Batch Size', 'Status')
     
-    
-    
-    
-    
+    writeFile(filename, production) 
+
 #    stockItem = stock['Item']
 #    stockStatus = stock['Status']
 #    batchItem = batch['Item']
@@ -47,38 +45,38 @@ def mrp(month, day, year):
 #    print("\n")
 #    print(reorder)    
 #    print("\n")
-    
-    
-    
-    writeFile(filename, production)
 
 # takes inventory, finds MTS items, compares inventory to reorder qty, and outputs production runs for necessary items
 def checkStockItems(inventory, reorder, stock, batch):
     print('creating production runs for MTS items...')
     print("\n")
     
-    production = [['', 'MTS', '']]
+    """ write guts to make comparisions"""
+    
+    productionRuns = [['', 'MTS', '']]
     item1 = ['Item 1', '1800', 'Stock']
     item2 = ['Item 2','400','Stock-1']
     
-    production.append(item1)
-    production.append(item2)
+    productionRuns.append(item1)
+    productionRuns.append(item2)
     
-    return production
+    return productionRuns
 
 # creates production runs for MTO items based on outstanding sales orders
-def checkSalesOrders(inventory, batch):
+def checkSalesOrders(inventory, batch, so):
     print ('creating production runs for MTO items...')
     print ("\n")
     
-    production = [['', 'MTO', '']]
+    """ write guts to make comparisons"""
+    
+    productionRuns = [['', 'MTO', '']]
     item3 = ['Item 3', '100', '8/15/2018' ]
     item4 = ['Item 4', '400', '8/20/2018']
     
-    production.append(item3)
-    production.append(item4)
+    productionRuns.append(item3)
+    productionRuns.append(item4)
     
-    return production
+    return productionRuns
 
 # reads and returns data in file as data frame
 # file names: 'Paint August MTS MTO', 'Paint August Batch Sizes', 'Paint August Inventory', 'Paint August Reorder Qty'
