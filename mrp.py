@@ -9,11 +9,13 @@ import pandas as pd
 
 def mrp(month, day, year):
     filename = 'Paint_Production'+'_'+month+'.'+day+'.'+year
-    stock = readFile('Paint_August_MTS_MTO')
-    batch = readFile('Paint_August_Batch_SIzes')
-    inventory = readFile('Paint_August_Inventory')
-    reorder = readFile('Paint_August_Reorder_Qty')
-    so = readFile('Sales Orders')
+    stock = readFile('Paint_August_MTS_MTO').set_index('Item').T.to_dict('list')
+    batch = readFile('Paint_August_Batch_SIzes').set_index('Item').T.to_dict('list')
+    inventory = readFile('Paint_August_Inventory').set_index('Item').T.to_dict('list')
+    reorder = readFile('Paint_August_Reorder_Qty').set_index('Item').T.to_dict('list')
+    so = readFile('Paint_8.7.2018_Sales_Orders').values.tolist()
+    
+    so = cleanSO(so)
     
     production = checkStockItems(inventory, reorder, stock, batch)
     
@@ -21,30 +23,23 @@ def mrp(month, day, year):
     
     for run in MTO:
         production.append(run)
+        
+    print(production)
     
     production = pd.DataFrame(production)
     production.columns = ('Item', 'Batch Size', 'Status')
     
     writeFile(filename, production) 
 
-#    stockItem = stock['Item']
-#    stockStatus = stock['Status']
-#    batchItem = batch['Item']
-#    batchSize = batch['Size']
-#    inventoryItem = inventory['Item']
-#    inventoryAmt = inventory['Qty']
-#    reorderItem = reorder['Item']
-#    reorderQty = reorder['Qty']
-#    soItem = so['Item']
-#    soQty = so['Qty']
-#    print(stock)  headers : Item, Status
+#    print(stock)  #headers : Item, Status
 #    print("\n")
-#    print(batch)  headers: Clean SKU, Batch Size
+#    print(batch) # headers: Item, Size
 #    print("\n")    
-#    print(inventory) headers: Item ID, Item, Gallons On Hand - Month
+#    print(inventory) #headers: Item, Qty
 #    print("\n")
-#    print(reorder)    
+#    print(reorder) #headers: Item, Qty
 #    print("\n")
+#    print(so) #headers: Item, Qty, Ship Date
 
 # takes inventory, finds MTS items, compares inventory to reorder qty, and outputs production runs for necessary items
 def checkStockItems(inventory, reorder, stock, batch):
@@ -52,13 +47,25 @@ def checkStockItems(inventory, reorder, stock, batch):
     print("\n")
     
     """ write guts to make comparisions"""
-    
     productionRuns = [['', 'MTS', '']]
-    item1 = ['Item 1', '1800', 'Stock']
-    item2 = ['Item 2','400','Stock-1']
-    
-    productionRuns.append(item1)
-    productionRuns.append(item2)
+    items = []
+    for item in inventory:
+        run = []
+        if(item in reorder and item in stock and stock[item][0] == 'MTS'):
+            if(int(reorder[item][0])>=int(inventory[item][0])):
+                run = [item, '', 'Stock-1']
+                items.append(run)
+            elif((int(reorder[item][0])*1.1)>=int(inventory[item][0])):
+                run = [item, '', 'Stock']
+                items.append(run)
+
+    for item in items:
+        cleanSKU= item[0][:item[0].find('-')]
+        item[1] = batch[cleanSKU][0]
+        
+    for item in items:
+        productionRuns.append(item)
+
     
     return productionRuns
 
@@ -70,13 +77,18 @@ def checkSalesOrders(inventory, batch, so):
     """ write guts to make comparisons"""
     
     productionRuns = [['', 'MTO', '']]
-    item3 = ['Item 3', '100', '8/15/2018' ]
-    item4 = ['Item 4', '400', '8/20/2018']
+    item3 = ['Item 3', '8/15/2018' ,'100'] 
+    item4 = ['Item 4', '8/20/2018', '400']
     
     productionRuns.append(item3)
     productionRuns.append(item4)
     
     return productionRuns
+
+def cleanSO(so):
+    for item in so:
+        item[2] = str(item[2])[:10]
+    return so
 
 # reads and returns data in file as data frame
 # file names: 'Paint August MTS MTO', 'Paint August Batch Sizes', 'Paint August Inventory', 'Paint August Reorder Qty'
@@ -95,5 +107,5 @@ def writeFile(filename, data):
     writer = pd.ExcelWriter(filename, engine = 'xlsxwriter')
     data.to_excel(writer, 'Sheet 1')
     writer.save()
-    print(filename + 'created')
+    print(filename + ' created')
     print("\n")
