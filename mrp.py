@@ -13,7 +13,7 @@ def mrp(month, day, year):
     batch = readFile('Paint_August_Batch_SIzes')
     inventory = readFile('Paint_August_Inventory')
     reorder = readFile('Paint_August_Reorder_Qty')
-    so = readFile('Sales Orders')
+    so = readFile('Paint_8.7.2018_Sales_Orders')
     
     production = checkStockItems(inventory, reorder, stock, batch)
     
@@ -26,25 +26,6 @@ def mrp(month, day, year):
     production.columns = ('Item', 'Batch Size', 'Status')
     
     writeFile(filename, production) 
-
-#    stockItem = stock['Item']
-#    stockStatus = stock['Status']
-#    batchItem = batch['Item']
-#    batchSize = batch['Size']
-#    inventoryItem = inventory['Item']
-#    inventoryAmt = inventory['Qty']
-#    reorderItem = reorder['Item']
-#    reorderQty = reorder['Qty']
-#    soItem = so['Item']
-#    soQty = so['Qty']
-#    print(stock)  headers : Item, Status
-#    print("\n")
-#    print(batch)  headers: Clean SKU, Batch Size
-#    print("\n")    
-#    print(inventory) headers: Item ID, Item, Gallons On Hand - Month
-#    print("\n")
-#    print(reorder)    
-#    print("\n")
 
 # takes inventory, finds MTS items, compares inventory to reorder qty, and outputs production runs for necessary items
 def checkStockItems(inventory, reorder, stock, batch):
