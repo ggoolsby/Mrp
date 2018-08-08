@@ -1,6 +1,6 @@
 """
-@author: graygoolsby
-08/07/2018
+@author: graygoolsby, ICP Summer Operation Intern
+August 2018
 Create lite Manufacturing Resource Planning system that outputs production runs by cross-referencing
 inventory levels, sales orders, MTS/MTO designation, restock quantities, and WCL output
 """
@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 def mrp(month, day, year):
-    filename = 'Paint_Production'+'_'+month+'.'+day+'.'+year
+    filename = 'Paint_Production'+'_'+month+'.'+day+'.'+year+'.xlsx'
     stock = readFile('Paint_August_MTS_MTO').set_index('Item').T.to_dict('list')
     batch = readFile('Paint_August_Batch_SIzes').set_index('Item').T.to_dict('list')
     inventory = readFile('Paint_August_Inventory').set_index('Item').T.to_dict('list')
@@ -24,8 +24,10 @@ def mrp(month, day, year):
     for run in MTO:
         production.append(run)
     
+    production = identifySplitFills(production)
+    
     production = pd.DataFrame(production)
-    production.columns = ('Item', 'Batch Size', 'Status')
+    production.columns = ('Item', 'Batch Size', 'Status', 'Split Fill')
     
     writeFile(filename, production) 
 
@@ -44,7 +46,7 @@ def checkStockItems(inventory, reorder, stock, batch):
     print('creating production runs for MTS items...')
     print("\n")
 
-    productionRuns = [['', 'MTS', '']]
+    productionRuns = [['MTS', 'Batch SIze', 'Status']]
     items = []
     for item in inventory:
         run = []
@@ -53,7 +55,6 @@ def checkStockItems(inventory, reorder, stock, batch):
                 run = [item, '', 'Stock-1']
                 items.append(run)
             elif((int(reorder[item][0])*1.1)>=int(inventory[item][0])):
-                print(int(reorder[item][0])*1.1)
                 run = [item, '', 'Stock']
                 items.append(run)
 
@@ -73,7 +74,7 @@ def checkSalesOrders(inventory, batch, so):
     
     """ write guts to make comparisons"""
     
-    productionRuns = [['', 'MTO', '']]
+    productionRuns = [['MTO', 'Batch Size', 'Status']]
     item3 = ['Item 3', '8/15/2018' ,'100'] 
     item4 = ['Item 4', '8/20/2018', '400']
     
@@ -87,10 +88,23 @@ def cleanSO(so):
         item[2] = str(item[2])[:10]
     return so
 
+def identifySplitFills(production):
+    for item in production:
+        cleanSKU = item[0][:item[0].find('-')]
+        count = 0
+        for item2 in production:
+            cleanSKU2 = item2[0][:item2[0].find('-')]
+            if(cleanSKU==cleanSKU2):
+                count+=1
+        if(count>1):
+            item.append('Split Fill')
+    return production
+
 # reads and returns data in file as data frame
-# file names: 'Paint August MTS MTO', 'Paint August Batch Sizes', 'Paint August Inventory', 'Paint August Reorder Qty'
+# file names: 'Paint August MTS MTO', 'Paint August Batch Sizes', 'Paint August Inventory', 'Paint August Reorder Qty', 'Paint_DATE_Sale_Orders'
 def readFile(filename):
-    filename += '.xlsx'
+    if(filename[filename.rfind('.'):] != 'xlsx'):
+        filename += '.xlsx'
     file = pd.ExcelFile(filename)
     sheets = file.sheet_names
     data = file.parse(sheets[0])
@@ -100,7 +114,6 @@ def readFile(filename):
 
 # writes dataframe into excel file
 def writeFile(filename, data):
-    filename += '.xlsx'
     writer = pd.ExcelWriter(filename, engine = 'xlsxwriter')
     data.to_excel(writer, 'Sheet 1')
     writer.save()
