@@ -2,7 +2,7 @@
 @author: graygoolsby
 08/07/2018
 Create lite Manufacturing Resource Planning system that outputs production runs by cross-referencing
-inventory levels, sales orders, and WCL output
+inventory levels, sales orders, MTS/MTO designation, restock quantities, and WCL output
 """
 import numpy as np
 import pandas as pd
@@ -23,8 +23,6 @@ def mrp(month, day, year):
     
     for run in MTO:
         production.append(run)
-        
-    print(production)
     
     production = pd.DataFrame(production)
     production.columns = ('Item', 'Batch Size', 'Status')
@@ -45,8 +43,7 @@ def mrp(month, day, year):
 def checkStockItems(inventory, reorder, stock, batch):
     print('creating production runs for MTS items...')
     print("\n")
-    
-    """ write guts to make comparisions"""
+
     productionRuns = [['', 'MTS', '']]
     items = []
     for item in inventory:
@@ -56,17 +53,17 @@ def checkStockItems(inventory, reorder, stock, batch):
                 run = [item, '', 'Stock-1']
                 items.append(run)
             elif((int(reorder[item][0])*1.1)>=int(inventory[item][0])):
+                print(int(reorder[item][0])*1.1)
                 run = [item, '', 'Stock']
                 items.append(run)
 
     for item in items:
         cleanSKU= item[0][:item[0].find('-')]
         item[1] = batch[cleanSKU][0]
-        
+
     for item in items:
         productionRuns.append(item)
 
-    
     return productionRuns
 
 # creates production runs for MTO items based on outstanding sales orders
@@ -108,4 +105,3 @@ def writeFile(filename, data):
     data.to_excel(writer, 'Sheet 1')
     writer.save()
     print(filename + ' created')
-    print("\n")
