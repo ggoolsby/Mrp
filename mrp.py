@@ -27,7 +27,7 @@ def mrp(month, day, year):
     production = identifySplitFills(production)
     
     production = pd.DataFrame(production)
-    production.columns = ('Item', 'Batch Size', 'Status', 'Split Fill')
+    production.columns = ('Item', 'Batch Size', 'Status', 'Gallons', 'Split Fill')
     
     writeFile(filename, production) 
 
@@ -45,17 +45,18 @@ def mrp(month, day, year):
 def checkStockItems(inventory, reorder, stock, batch):
     print('creating production runs for MTS items...')
     print("\n")
-
-    productionRuns = [['MTS', 'Batch SIze', 'Status']]
+    
+    """ add in column for qty of some sort """
+    productionRuns = [['MTS', '', '', 'Current Stock']]
     items = []
     for item in inventory:
         run = []
         if(item in reorder and item in stock and stock[item][0] == 'MTS'):
             if(int(reorder[item][0])>=int(inventory[item][0])):
-                run = [item, '', 'Stock-1']
+                run = [item, '', 'Stock-1', int(inventory[item][0])]
                 items.append(run)
             elif((int(reorder[item][0])*1.1)>=int(inventory[item][0])):
-                run = [item, '', 'Stock']
+                run = [item, '', 'Stock', int(inventory[item][0])]
                 items.append(run)
 
     for item in items:
@@ -74,9 +75,9 @@ def checkSalesOrders(inventory, batch, so):
     
     """ write guts to make comparisons"""
     
-    productionRuns = [['MTO', 'Batch Size', 'Status']]
-    item3 = ['Item 3', '8/15/2018' ,'100'] 
-    item4 = ['Item 4', '8/20/2018', '400']
+    productionRuns = [['MTO', 'Batch Size', 'Status', 'Needed for orders' ]]
+    item3 = ['Item 3', '8/15/2018' ,'100', 15] 
+    item4 = ['Item 4', '8/20/2018', '400', 50]
     
     productionRuns.append(item3)
     productionRuns.append(item4)
@@ -90,14 +91,17 @@ def cleanSO(so):
 
 def identifySplitFills(production):
     for item in production:
-        cleanSKU = item[0][:item[0].find('-')]
-        count = 0
-        for item2 in production:
-            cleanSKU2 = item2[0][:item2[0].find('-')]
-            if(cleanSKU==cleanSKU2):
-                count+=1
-        if(count>1):
-            item.append('Split Fill')
+        if(item[0] == 'MTS' or item[0] == 'MTO'):
+            pass
+        else:
+            cleanSKU = item[0][:item[0].find('-')]
+            count = 0
+            for item2 in production:
+                cleanSKU2 = item2[0][:item2[0].find('-')]
+                if(cleanSKU==cleanSKU2):
+                    count+=1
+            if(count>1):
+                item.append('Split Fill')
     return production
 
 # reads and returns data in file as data frame
