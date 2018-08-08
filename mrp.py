@@ -45,8 +45,7 @@ def mrp(month, day, year):
 def checkStockItems(inventory, reorder, stock, batch):
     print('creating production runs for MTS items...')
     print("\n")
-    
-    """ add in column for qty of some sort """
+
     productionRuns = [['MTS', '', '', 'Current Stock']]
     items = []
     for item in inventory:
@@ -72,16 +71,29 @@ def checkStockItems(inventory, reorder, stock, batch):
 def checkSalesOrders(inventory, batch, so):
     print ('creating production runs for MTO items...')
     print ("\n")
-    
-    """ write guts to make comparisons"""
-    
-    productionRuns = [['MTO', 'Batch Size', 'Status', 'Needed for orders' ]]
-    item3 = ['Item 3', '8/15/2018' ,'100', 15] 
-    item4 = ['Item 4', '8/20/2018', '400', 50]
-    
-    productionRuns.append(item3)
-    productionRuns.append(item4)
-    
+    productionRuns = [['MTO', 'Batch Size', 'Order due', 'Needed for orders' ]]
+    items = []
+    for item in so:
+        run = []
+        if(item[0] in inventory and float(inventory[item[0]][0])<float(item[1])):
+            run = [item[0], '', item[2], int(item[1])-int(inventory[item[0]][0])]
+            items.append(run)
+        elif(item[0] not in inventory):
+            run = [item[0], '', item[2], int(item[1])]
+            items.append(run)
+        else:
+            pass
+        
+    for item in items:
+        cleanSKU = item[0][:item[0].find('-')]
+        if(cleanSKU in batch):
+            item[1] = batch[cleanSKU][0]
+        else:
+            item[1] = 100
+            
+    for item in items:
+        productionRuns.append(item)
+
     return productionRuns
 
 def cleanSO(so):
