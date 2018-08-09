@@ -14,19 +14,18 @@ def mrp(prodLine, month, day, year):
     year =str(year)
     filename = prodLine+'_Production'+'_'+month+'.'+day+'.'+year+'.xlsx'
     
-    stock = readFile(prodLine+'_'+month+'_MTS_MTO').set_index('Item').T.to_dict('list')
+    stock = readFile(prodLine+'_'+month+'_MTS_MTO_Tolled').set_index('Item').T.to_dict('list')
     batch = readFile(prodLine+'_'+month+'_Batch_SIzes').set_index('Item').T.to_dict('list')
     inventory = readFile(prodLine+'_'+month+'.'+day+'.'+year+'_Inventory').set_index('Item').T.to_dict('list')
     reorder = readFile(prodLine+'_'+month+'_Reorder_Qty').set_index('Item').T.to_dict('list')
-    tolled = readFile(prodLine+'_'+month+'_Tolled_Items').set_index('Item').T.to_dict('list')
     so = readFile(prodLine+'_'+month+'.'+day+'.'+year+'_Sales_Orders').values.tolist()
     schedule = readFile(prodLine+'_'+month+'.'+day+'.'+year+'_Scheduled_Production').values.tolist()
 
     so = cleanSO(so)
 
-    mts = checkStockItems(inventory, reorder, stock, batch, tolled)
+    mts = checkStockItems(inventory, reorder, stock, batch)
 
-    itemRuns = checkSalesOrders(inventory, batch, so, mts, tolled)
+    itemRuns = checkSalesOrders(inventory, batch, so, mts, stock)
 
     productionRuns = removeScheduledBatches(schedule, itemRuns)
 
@@ -38,7 +37,7 @@ def mrp(prodLine, month, day, year):
     writeFile(filename, production) 
 
 # takes inventory, finds MTS items, compares inventory to reorder qty, and outputs production runs for necessary items
-def checkStockItems(inventory, reorder, stock, batch, tolled):
+def checkStockItems(inventory, reorder, stock, batch):
     print('creating production runs for MTS items...')
     print("\n")
 
@@ -46,23 +45,26 @@ def checkStockItems(inventory, reorder, stock, batch, tolled):
     items = []
     for item in inventory:
         run = []
-        if(item in reorder and item in stock and stock[item][0] == 'MTS'):
+        if(item in reorder and item in stock):
             if((float(reorder[item][0])*.75)>=float(inventory[item][0])):
-                if(item in tolled):
+                if(stock[item][0] == 'TTS'):
                     run = [item, '', 'Buy-1', float(inventory[item][0])]
-                else:
+                if(stock[item][0] == 'MTS'):
                     run = [item, '', 'Stock-1', float(inventory[item][0])]
-                items.append(run)
-            elif(float(reorder[item][0])>=float(inventory[item][0])):
-                if(item in tolled):
+                if(len(run)>0):
+                    items.append(run)
+            if(float(reorder[item][0])>=float(inventory[item][0])):
+                if(stock[item][0] == 'TTS'):
                     run = [item, '', 'Buy', float(inventory[item][0])]
-                else:
+                if(stock[item][0] == 'MTS'):
                     run = [item, '', 'Stock', float(inventory[item][0])]
-                items.append(run)
+                if(len(run)>0):
+                    items.append(run)
 
     for item in items:
-        cleanSKU= item[0][:item[0].find('-')]
-        item[1] = batch[cleanSKU][0]
+        if(item[2] != 'Buy' and item[2] != 'Buy-1'):
+            cleanSKU= item[0][:item[0].find('-')]
+            item[1] = batch[cleanSKU][0]
 
     for item in items:
         productionRuns.append(item)
@@ -70,34 +72,50 @@ def checkStockItems(inventory, reorder, stock, batch, tolled):
     return productionRuns
 
 # creates production runs for MTO items based on outstanding sales orders
-def checkSalesOrders(inventory, batch, so, production, tolled):
+def checkSalesOrders(inventory, batch, so, production, stock):
     print ('creating production runs for MTO items...')
     print ("\n")
     productionRuns = [['MTO', 'Batch Size', 'Order due', 'Needed for orders' ]]
     items = []
     for item in so:
+        issue = []
         run = []
-        if(item[0] in inventory and float(inventory[item[0]][0])<float(item[1])):
-            if(item[0] in tolled):
-                run = [item[0], '', tolled[item][0]+' '+item[2], float(item[1])-float(inventory[item[0]][0])]
+        if(item[0] in stock and stock[item[0]][0] == 'MTS'):
+            pass
+        if(item[0] in stock and stock[item[0]][0] == 'TTS'):
+            pass
+        if(item [0] in stock and item[0] in inventory and float(inventory[item[0]][0])<float(item[1])):
+            if(stock[item[0]][0] == 'TTO'):
+                run = [item[0], '', str(stock[item[0]])+' '+item[2], float(item[1])-float(inventory[item[0]][0])]
+            if(stock[item[0]][0] == 'TTB'):
+                run = [item[0], '', str(stock[item[0]])+' '+item[2], float(item[1])-float(inventory[item[0]][0])]
             else:
                 run = [item[0], '', item[2], float(item[1])-float(inventory[item[0]][0])]
-            items.append(run)
-        elif(item[0] not in inventory):
-            if(item[0] in tolled):
-                run = [item[0], '', tolled[item][0]+' '+item[2], float[item[1]]]
+            if(len(run)>0):
+                items.append(run)
+        if(item[0] in stock and item[0] not in inventory):
+            if(stock[item[0]][0] == 'TTO' ):
+                run = [item[0], '', 'Buy '+str(item[2]), float(item[1])]
+            if(stock[item[0]][0] == 'TTB'):
+                run = [item[0], '', 'Buy '+str(item[2]), float(item[1])]                
             else:
                 run = [item[0], '', item[2], float(item[1])]
-            items.append(run)
+            if(len(run)>0):
+                items.append(run)
         else:
-            pass
-        
+            issue.append(item)
+
+    print('check data on these items:')
+    print(issue)
+    print("\n")
+
     for item in items:
-        cleanSKU = item[0][:item[0].find('-')]
-        if(cleanSKU in batch):
-            item[1] = batch[cleanSKU][0]
-        else:
-            item[1] = 100
+        if(not(item[2][:3] == 'Buy')):
+            cleanSKU = item[0][:item[0].find('-')]
+            if(cleanSKU in batch):
+                item[1] = batch[cleanSKU][0]
+            else:
+                item[1] = 100
             
     for item in items:
         productionRuns.append(item)
