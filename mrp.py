@@ -4,45 +4,41 @@ August 2018
 Create lite Manufacturing Resource Planning system that outputs production runs by cross-referencing
 inventory levels, sales orders, MTS/MTO designation, restock quantities, and WCL output
 """
-import numpy as np
 import pandas as pd
 
-def mrp(month, day, year):
-    filename = 'Paint_Production'+'_'+month+'.'+day+'.'+year+'.xlsx'
-    stock = readFile('Paint_August_MTS_MTO').set_index('Item').T.to_dict('list')
-    batch = readFile('Paint_August_Batch_SIzes').set_index('Item').T.to_dict('list')
-    inventory = readFile('Paint_August_Inventory').set_index('Item').T.to_dict('list')
-    reorder = readFile('Paint_August_Reorder_Qty').set_index('Item').T.to_dict('list')
-    so = readFile('Paint_8.7.2018_Sales_Orders').values.tolist()
+# master function that runs full MRP process. CALL THIS FUNCTION
+def mrp(prodLine, month, day, year):
+    prodLine = str(prodLine)
+    month = str(month)
+    day = str(day)
+    year =str(year)
+    filename = prodLine+'_Production'+'_'+month+'.'+day+'.'+year+'.xlsx'
     
+    stock = readFile(prodLine+'_'+month+'_MTS_MTO').set_index('Item').T.to_dict('list')
+    batch = readFile(prodLine+'_'+month+'_Batch_SIzes').set_index('Item').T.to_dict('list')
+    inventory = readFile(prodLine+'_'+month+'.'+day+'.'+year+'_Inventory').set_index('Item').T.to_dict('list')
+    reorder = readFile(prodLine+'_'+month+'_Reorder_Qty').set_index('Item').T.to_dict('list')
+    tolled = readFile(prodLine+'_'+month+'_Tolled_Items').set_index('Item').T.to_dict('list')
+    so = readFile(prodLine+'_'+month+'.'+day+'.'+year+'_Sales_Orders').values.tolist()
+    schedule = readFile(prodLine+'_'+month+'.'+day+'.'+year+'_Scheduled_Production').values.tolist()
+
     so = cleanSO(so)
-    
-    production = checkStockItems(inventory, reorder, stock, batch)
-    
-    MTO = checkSalesOrders(inventory, batch, so)
-    
-    for run in MTO:
-        production.append(run)
-    
-    production = identifySplitFills(production)
-    
+
+    mts = checkStockItems(inventory, reorder, stock, batch, tolled)
+
+    itemRuns = checkSalesOrders(inventory, batch, so, mts, tolled)
+
+    productionRuns = removeScheduledBatches(schedule, itemRuns)
+
+    production = identifySplitFills(productionRuns)
+
     production = pd.DataFrame(production)
     production.columns = ('Item', 'Batch Size', 'Status', 'Gallons', 'Split Fill')
-    
+
     writeFile(filename, production) 
 
-#    print(stock)  #headers : Item, Status
-#    print("\n")
-#    print(batch) # headers: Item, Size
-#    print("\n")    
-#    print(inventory) #headers: Item, Qty
-#    print("\n")
-#    print(reorder) #headers: Item, Qty
-#    print("\n")
-#    print(so) #headers: Item, Qty, Ship Date
-
 # takes inventory, finds MTS items, compares inventory to reorder qty, and outputs production runs for necessary items
-def checkStockItems(inventory, reorder, stock, batch):
+def checkStockItems(inventory, reorder, stock, batch, tolled):
     print('creating production runs for MTS items...')
     print("\n")
 
@@ -51,11 +47,17 @@ def checkStockItems(inventory, reorder, stock, batch):
     for item in inventory:
         run = []
         if(item in reorder and item in stock and stock[item][0] == 'MTS'):
-            if(int(reorder[item][0])>=int(inventory[item][0])):
-                run = [item, '', 'Stock-1', int(inventory[item][0])]
+            if((float(reorder[item][0])*.75)>=float(inventory[item][0])):
+                if(item in tolled):
+                    run = [item, '', 'Buy-1', float(inventory[item][0])]
+                else:
+                    run = [item, '', 'Stock-1', float(inventory[item][0])]
                 items.append(run)
-            elif((int(reorder[item][0])*1.1)>=int(inventory[item][0])):
-                run = [item, '', 'Stock', int(inventory[item][0])]
+            elif(float(reorder[item][0])>=float(inventory[item][0])):
+                if(item in tolled):
+                    run = [item, '', 'Buy', float(inventory[item][0])]
+                else:
+                    run = [item, '', 'Stock', float(inventory[item][0])]
                 items.append(run)
 
     for item in items:
@@ -68,7 +70,7 @@ def checkStockItems(inventory, reorder, stock, batch):
     return productionRuns
 
 # creates production runs for MTO items based on outstanding sales orders
-def checkSalesOrders(inventory, batch, so):
+def checkSalesOrders(inventory, batch, so, production, tolled):
     print ('creating production runs for MTO items...')
     print ("\n")
     productionRuns = [['MTO', 'Batch Size', 'Order due', 'Needed for orders' ]]
@@ -76,10 +78,16 @@ def checkSalesOrders(inventory, batch, so):
     for item in so:
         run = []
         if(item[0] in inventory and float(inventory[item[0]][0])<float(item[1])):
-            run = [item[0], '', item[2], int(item[1])-int(inventory[item[0]][0])]
+            if(item[0] in tolled):
+                run = [item[0], '', tolled[item][0]+' '+item[2], float(item[1])-float(inventory[item[0]][0])]
+            else:
+                run = [item[0], '', item[2], float(item[1])-float(inventory[item[0]][0])]
             items.append(run)
         elif(item[0] not in inventory):
-            run = [item[0], '', item[2], int(item[1])]
+            if(item[0] in tolled):
+                run = [item[0], '', tolled[item][0]+' '+item[2], float[item[1]]]
+            else:
+                run = [item[0], '', item[2], float(item[1])]
             items.append(run)
         else:
             pass
@@ -93,19 +101,28 @@ def checkSalesOrders(inventory, batch, so):
             
     for item in items:
         productionRuns.append(item)
+        
+    for run in productionRuns:
+        production.append(run)
 
-    return productionRuns
+    return production
 
+# cleans time from due dates on sales orders
 def cleanSO(so):
     for item in so:
         item[2] = str(item[2])[:10]
     return so
 
+# identifies and tags all products that are same item, just different size
 def identifySplitFills(production):
+    batches = 0
     for item in production:
         if(item[0] == 'MTS' or item[0] == 'MTO'):
-            pass
+            batches += 1
         else:
+            if(batches > 1):
+                if(item[3]/item[1] > 1):
+                    item.append('MULTIPLE BATCHES')
             cleanSKU = item[0][:item[0].find('-')]
             count = 0
             for item2 in production:
@@ -113,7 +130,19 @@ def identifySplitFills(production):
                 if(cleanSKU==cleanSKU2):
                     count+=1
             if(count>1):
-                item.append('Split Fill')
+                if(len(item)<5):
+                    item.append('Split Fill')
+                else:
+                    item[4] = item[4]+ ' - Split FIll'
+    return production
+
+def removeScheduledBatches(schedule, production):
+    for run in production:
+        sku = run[0]
+        for batch in schedule:
+            if(sku == batch[0]):
+                production.remove(run)
+
     return production
 
 # reads and returns data in file as data frame
