@@ -43,6 +43,7 @@ def checkStockItems(inventory, reorder, stock, batch):
 
     productionRuns = [['MTS', '', '', 'Current Stock']]
     items = []
+    issue = []
     for item in inventory:
         run = []
         if(item in reorder and item in stock):
@@ -60,6 +61,8 @@ def checkStockItems(inventory, reorder, stock, batch):
                     run = [item, '', 'Stock', float(inventory[item][0])]
                 if(len(run)>0):
                     items.append(run)
+        else:
+            issue.append(item)
 
     for item in items:
         if(item[2] != 'Buy' and item[2] != 'Buy-1'):
@@ -67,8 +70,11 @@ def checkStockItems(inventory, reorder, stock, batch):
             item[1] = batch[cleanSKU][0]
 
     for item in items:
-        print(item)
         productionRuns.append(item)
+        
+    print('check data on these items (in inventory but no reorder QTY or stock designation):')
+    print(issue)
+    print("\n")
 
     return productionRuns
 
@@ -78,8 +84,8 @@ def checkSalesOrders(inventory, batch, so, production, stock):
     print ("\n")
     productionRuns = [['MTO', 'Batch Size', 'Order due', 'Needed for orders' ]]
     items = []
+    issue = []
     for item in so:
-        issue = []
         run = []
         if(item[0] in stock and stock[item[0]][0] == 'MTS'):
             pass
@@ -104,9 +110,9 @@ def checkSalesOrders(inventory, batch, so, production, stock):
             if(len(run)>0):
                 items.append(run)
         else:
-            issue.append(item)
+            issue.append(item[0])
 
-    print('check data on these items:')
+    print('check data on these items (ordered but no stock designation):')
     print(issue)
     print("\n")
 
