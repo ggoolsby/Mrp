@@ -53,7 +53,7 @@ def checkStockItems(inventory, reorder, stock, batch):
                     run = [item, '', 'Stock-1', float(inventory[item][0])]
                 if(len(run)>0):
                     items.append(run)
-            if(float(reorder[item][0])>=float(inventory[item][0])):
+            if(float(reorder[item][0])>=float(inventory[item][0]) and float((reorder[item][0])*.75) < float(inventory[item][0])):
                 if(stock[item][0] == 'TTS'):
                     run = [item, '', 'Buy', float(inventory[item][0])]
                 if(stock[item][0] == 'MTS'):
