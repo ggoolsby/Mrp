@@ -32,6 +32,7 @@ def mrp(prodLine, month, day, year):
     production = identifySplitFills(productionRuns)
 
     production = pd.DataFrame(production)
+    print(production)
     production.columns = ('Item', 'Batch Size', 'Status', 'Gallons', 'Split Fill')
 
     writeFile(filename, production) 
@@ -90,13 +91,16 @@ def checkSalesOrders(inventory, batch, so, production, stock):
         if(item[0] in stock and stock[item[0]][0] == 'MTS'):
             pass
         if(item[0] in stock and stock[item[0]][0] == 'TTS'):
+            print(item[0])
+            print("\n")
             pass
         if(item [0] in stock and item[0] in inventory and float(inventory[item[0]][0])<float(item[1])):
             if(stock[item[0]][0] == 'TTO'):
                 run = [item[0], '', str(stock[item[0]])+' '+item[2], float(item[1])-float(inventory[item[0]][0])]
             if(stock[item[0]][0] == 'TTB'):
                 run = [item[0], '', str(stock[item[0]])+' '+item[2], float(item[1])-float(inventory[item[0]][0])]
-            else:
+            if(stock[item[0]][0] == 'MTO'):
+                print(item[0])
                 run = [item[0], '', item[2], float(item[1])-float(inventory[item[0]][0])]
             if(len(run)>0):
                 items.append(run)
@@ -143,6 +147,7 @@ def identifySplitFills(production):
     batches = 0
     for item in production:
         if(item[0] == 'MTS' or item[0] == 'MTO'):
+            item.append('')
             batches += 1
         else:
             if(batches > 1):
@@ -154,7 +159,7 @@ def identifySplitFills(production):
                 cleanSKU2 = item2[0][:item2[0].find('-')]
                 if(cleanSKU==cleanSKU2):
                     count+=1
-            if(count>1):
+            if(count>1 and item[2][:3] != 'Buy' ):
                 if(len(item)<5):
                     item.append('Split Fill')
                 else:
