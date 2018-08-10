@@ -32,8 +32,7 @@ def mrp(prodLine, month, day, year):
     production = identifySplitFills(productionRuns)
 
     production = pd.DataFrame(production)
-    print(production)
-    production.columns = ('Item', 'Batch Size', 'Status', 'Gallons', 'Split Fill')
+    production.columns = ('Item', 'Batch Size (Gal)', 'Status', 'Qty', 'Split Fill')
 
     writeFile(filename, production) 
 
@@ -63,7 +62,8 @@ def checkStockItems(inventory, reorder, stock, batch):
                 if(len(run)>0):
                     items.append(run)
         else:
-            issue.append(item)
+            if(inventory[item][0]>0):
+                issue.append([item,inventory[item]])
 
     for item in items:
         if(item[2] != 'Buy' and item[2] != 'Buy-1'):
@@ -91,8 +91,6 @@ def checkSalesOrders(inventory, batch, so, production, stock):
         if(item[0] in stock and stock[item[0]][0] == 'MTS'):
             pass
         if(item[0] in stock and stock[item[0]][0] == 'TTS'):
-            print(item[0])
-            print("\n")
             pass
         if(item [0] in stock and item[0] in inventory and float(inventory[item[0]][0])<float(item[1])):
             if(stock[item[0]][0] == 'TTO'):
@@ -100,7 +98,6 @@ def checkSalesOrders(inventory, batch, so, production, stock):
             if(stock[item[0]][0] == 'TTB'):
                 run = [item[0], '', str(stock[item[0]])+' '+item[2], float(item[1])-float(inventory[item[0]][0])]
             if(stock[item[0]][0] == 'MTO'):
-                print(item[0])
                 run = [item[0], '', item[2], float(item[1])-float(inventory[item[0]][0])]
             if(len(run)>0):
                 items.append(run)
