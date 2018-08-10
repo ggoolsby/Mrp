@@ -6,22 +6,6 @@ inventory levels, sales orders, MTS/MTO designation, restock quantities, and WCL
 """
 import pandas as pd
 
-<<<<<<< HEAD
-def mrp(month, day, year):
-    filename = 'Paint_Production'+'_'+month+'.'+day+'.'+year
-    stock = readFile('Paint_August_MTS_MTO')
-    batch = readFile('Paint_August_Batch_SIzes')
-    inventory = readFile('Paint_August_Inventory')
-    reorder = readFile('Paint_August_Reorder_Qty')
-    so = readFile('Paint_8.7.2018_Sales_Orders')
-    
-    production = checkStockItems(inventory, reorder, stock, batch)
-    
-    MTO = checkSalesOrders(inventory, batch, so)
-    
-    for run in MTO:
-        production.append(run)
-=======
 # master function that runs full MRP process. CALL THIS FUNCTION
 def mrp(prodLine, month, day, year):
     prodLine = str(prodLine)
@@ -29,7 +13,6 @@ def mrp(prodLine, month, day, year):
     day = str(day)
     year =str(year)
     filename = prodLine+'_Production'+'_'+month+'.'+day+'.'+year+'.xlsx'
->>>>>>> mts
     
     stock = readFile(prodLine+'_'+month+'_MTS_MTO_Tolled').set_index('Item').T.to_dict('list')
     batch = readFile(prodLine+'_'+month+'_Batch_SIzes').set_index('Item').T.to_dict('list')
@@ -51,11 +34,8 @@ def mrp(prodLine, month, day, year):
     production = pd.DataFrame(production)
     production.columns = ('Item', 'Batch Size', 'Status', 'Gallons', 'Split Fill')
 
-<<<<<<< HEAD
-=======
     writeFile(filename, production) 
 
->>>>>>> mts
 # takes inventory, finds MTS items, compares inventory to reorder qty, and outputs production runs for necessary items
 def checkStockItems(inventory, reorder, stock, batch):
     print('creating production runs for MTS items...')
@@ -87,6 +67,7 @@ def checkStockItems(inventory, reorder, stock, batch):
             item[1] = batch[cleanSKU][0]
 
     for item in items:
+        print(item)
         productionRuns.append(item)
 
     return productionRuns
