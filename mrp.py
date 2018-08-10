@@ -33,7 +33,7 @@ def mrp(prodLine, month, day, year):
 
     # turn output into format to write to excel
     production = pd.DataFrame(production)
-    production.columns = ('Item', 'Batch Size (Gal)', 'Status', 'Qty', 'Split Fill')
+    production.columns = ('Item', 'Batch Size (Gal)', 'Status', 'Qty', 'Tags')
 
     # write final output to excel
     writeFile(filename, production) 
@@ -105,7 +105,7 @@ def checkSalesOrders(inventory, batch, so, production, stock):
     print ("\n")
 
     # create header for MTO section of output and create objects to store production and data gaps
-    productionRuns = [['MTO', 'Batch Size', 'Order due', 'Needed for orders' ]]
+    productionRuns = [['MTO', 'Batch Size', 'Order due', 'Needed for orders', 'Tags' ]]
     items = []
     issue = []
 
@@ -196,7 +196,6 @@ def identifySplitFills(production):
 
         # skip MTS and MTO lines (no need to tag these)
         if(item[0] == 'MTS' or item[0] == 'MTO'):
-            item.append('')
             batches += 1
 
         # tag all other lines
