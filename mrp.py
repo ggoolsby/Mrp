@@ -29,7 +29,7 @@ def mrp(prodLine, month, day, year):
     mts = checkStockItems(inventory, reorder, stock, batch)
     itemRuns = checkSalesOrders(inventory, batch, so, mts, stock)
     productionRuns = removeScheduledBatches(schedule, itemRuns)
-    production = identifySplitFills(productionRuns)
+    production = identifySplitFills(productionRuns,stock)
 
     # turn output into format to write to excel
     production = pd.DataFrame(production)
@@ -43,7 +43,7 @@ def checkStockItems(inventory, reorder, stock, batch):
     print('creating production runs for MTS items...')
     print("\n")
     # create header for output and objects to store data for production and data gaps
-    productionRuns = [['MTS', '', '', 'Current Stock']]
+    productionRuns = [['MTS', '', '', 'Restock Qty']]
     items = []
     issue = []
 
@@ -54,15 +54,23 @@ def checkStockItems(inventory, reorder, stock, batch):
 
         # prevents errors that arise from data gaps
         if(item in reorder and item in stock):
-
+            
             # check inventory levels against reorder points
+            if((float(reorder[item][0])*2)>=float(inventory[item][0])):
+                
+                # only create production in this section for stocked items
+                if(stock[item][0] == 'TTS'):
+                    run = [item, '', 'Buy-30', float(reorder[item][0])]
+                if(stock[item][0] == 'MTS'):
+                    run = [item, '', 'Stock-30', float(reorder[item][0])]
+
             if((float(reorder[item][0])*.75)>=float(inventory[item][0])):
 
                 # only create production in this section for stocked items
                 if(stock[item][0] == 'TTS'):
-                    run = [item, '', 'Buy-1', float(inventory[item][0])]
+                    run = [item, '', 'Buy-1', float(reorder[item][0])]
                 if(stock[item][0] == 'MTS'):
-                    run = [item, '', 'Stock-1', float(inventory[item][0])]
+                    run = [item, '', 'Stock-1', float(reorder[item][0])]
 
                 # filters out elements that represent items that don't need to be restocked
                 if(len(run)>0):
@@ -71,9 +79,9 @@ def checkStockItems(inventory, reorder, stock, batch):
             if(float(reorder[item][0])>=float(inventory[item][0]) and float((reorder[item][0])*.75) < float(inventory[item][0])):
 
                 if(stock[item][0] == 'TTS'):
-                    run = [item, '', 'Buy', float(inventory[item][0])]
+                    run = [item, '', 'Buy', float(reorder[item][0])]
                 if(stock[item][0] == 'MTS'):
-                    run = [item, '', 'Stock', float(inventory[item][0])]
+                    run = [item, '', 'Stock', float(reorder[item][0])]
 
                 if(len(run)>0):
                     items.append(run)
@@ -84,7 +92,7 @@ def checkStockItems(inventory, reorder, stock, batch):
 
     # add batch sizes to items that are made in-house
     for item in items:
-        if(item[2] != 'Buy' and item[2] != 'Buy-1'):
+        if(item[2] != 'Buy' and item[2] != 'Buy-1' and item[2] != 'Buy-30'):
             cleanSKU= item[0][:item[0].find('-')]
             item[1] = batch[cleanSKU][0]
 
@@ -125,9 +133,9 @@ def checkSalesOrders(inventory, batch, so, production, stock):
 
             # add tags for buying or making products and ensure no MTS or TTS items in MTO section
             if(stock[item[0]][0] == 'TTO'):
-                run = [item[0], '', str(stock[item[0]])+' '+item[2], float(item[1])-float(inventory[item[0]][0])]
+                run = [item[0], '', 'Buy '+item[2], float(item[1])-float(inventory[item[0]][0])]
             if(stock[item[0]][0] == 'TTB'):
-                run = [item[0], '', str(stock[item[0]])+' '+item[2], float(item[1])-float(inventory[item[0]][0])]
+                run = [item[0], '', 'Buy '+item[2], float(item[1])-float(inventory[item[0]][0])]
             if(stock[item[0]][0] == 'MTO'):
                 run = [item[0], '', item[2], float(item[1])-float(inventory[item[0]][0])]
 
@@ -159,14 +167,14 @@ def checkSalesOrders(inventory, batch, so, production, stock):
     print(issue)
     print("\n")
 
-    # add batches to items that are made in house
+    # add batch sizes to items that are made in house
     for item in items:
         if(not(item[2][:3] == 'Buy')):
             cleanSKU = item[0][:item[0].find('-')]
             if(cleanSKU in batch):
                 item[1] = batch[cleanSKU][0]
             else:
-                item[1] = 100
+                item[1] = '100*'
 
     # add production info to MTO section      
     for item in items:
@@ -187,7 +195,7 @@ def cleanSO(so):
     return so
 
 # identifies and tags all products that are same item, just different size
-def identifySplitFills(production):
+def identifySplitFills(production, stock):
     # counter to help tag MTO items for multiple batches
     batches = 0
 
@@ -218,11 +226,11 @@ def identifySplitFills(production):
                 # translate other items into key for batch sizes
                 cleanSKU2 = item2[0][:item2[0].find('-')]
                 # if they are same item in different sizes
-                if(cleanSKU==cleanSKU2):
+                if(cleanSKU==cleanSKU2 and item[2][:3] != 'Buy'  and item2[2][:3] != 'Buy'):
                     count+=1
 
             # there is more that one item from same product and it's made in-house
-            if(count>1 and item[2][:3] != 'Buy' ):
+            if(count>1 and item[2][:3] != 'Buy'  and stock[item[0]] != 'TTO' and stock[item[0]] != 'TTB' ):
 
                 # check if MULTIPLE BATCHES tag is there, and add 'Split Fill' tag
                 if(len(item)<5):
