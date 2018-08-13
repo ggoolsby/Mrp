@@ -60,8 +60,10 @@ def checkStockItems(inventory, reorder, stock, batch):
                 
                 # only create production in this section for stocked items
                 if(stock[item][0] == 'TTS'):
+                    print(item+ ' TTS')
                     run = [item, '', 'Buy-30', float(reorder[item][0])]
                 if(stock[item][0] == 'MTS'):
+                    print(item[0]+ ' MTS')
                     run = [item, '', 'Stock-30', float(reorder[item][0])]
 
             if((float(reorder[item][0])*.75)>=float(inventory[item][0])):
@@ -101,9 +103,9 @@ def checkStockItems(inventory, reorder, stock, batch):
         productionRuns.append(item)
 
     # return items with data gaps to user
-    print('check data on these items (in inventory but no reorder QTY or stock designation):')
-    print(issue)
-    print("\n")
+#    print('check data on these items (in inventory but no reorder QTY or stock designation):')
+#    print(issue)
+#    print("\n")
 
     return productionRuns
 
@@ -163,9 +165,9 @@ def checkSalesOrders(inventory, batch, so, production, stock):
             issue.append(item[0])
 
     # return items with data gaps to user
-    print('check data on these items (ordered but no stock designation):')
-    print(issue)
-    print("\n")
+#    print('check data on these items (ordered but no stock designation):')
+#    print(issue)
+#    print("\n")
 
     # add batch sizes to items that are made in house
     for item in items:
@@ -264,8 +266,8 @@ def readFile(filename):
     sheets = file.sheet_names
     data = file.parse(sheets[0])
 
-    print(filename +' read')
-    print("\n")
+#    print(filename +' read')
+#    print("\n")
 
     return data
 
