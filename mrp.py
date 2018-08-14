@@ -159,7 +159,7 @@ def checkSalesOrders(inventory, batch, so, production, stock):
                 items.append(run)
 
         # catch all items that have data gaps
-        else:
+    else:
             issue.append(item[0])
 
     # return items with data gaps to user
