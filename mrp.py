@@ -101,9 +101,9 @@ def checkStockItems(inventory, reorder, stock, batch):
         productionRuns.append(item)
 
     # return items with data gaps to user
-    print('check data on these items (in inventory but no reorder QTY or stock designation):')
-    print(issue)
-    print("\n")
+#    print('check data on these items (in inventory but no reorder QTY or stock designation):')
+#    print(issue)
+#    print("\n")
 
     return productionRuns
 
